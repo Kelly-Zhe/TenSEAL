@@ -295,3 +295,11 @@ class Context:
         self.data.make_context_public(
             generate_galois_keys=generate_galois_keys, generate_relin_keys=generate_relin_keys
         )
+    def get_modulusQ(self):
+        return self.data.get_modulusQ()
+
+    def get_relin_key_values(self):
+        return self.data.get_relin_key_values()
+
+    def get_galois_key_values(self):
+        return self.data.get_galois_key_values()

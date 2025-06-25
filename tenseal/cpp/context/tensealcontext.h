@@ -7,6 +7,7 @@
 #include "tenseal/cpp/utils/helpers.h"
 #include "tenseal/cpp/utils/threadpool.h"
 #include "tenseal/proto/tensealcontext.pb.h"
+// #include "tenseal/cpp/tensors/ckksvector.h"
 
 namespace tenseal {
 
@@ -261,6 +262,9 @@ class TenSEALContext {
     bool has_public_key() const;
     bool has_secret_key() const;
     bool has_relin_keys() const;
+    std::vector<uint64_t> get_modulusQ() const;
+    std::vector<std::vector<uint64_t>> get_relin_key_values() const;
+    std::vector<std::vector<uint64_t>> get_galois_key_values() const;
 
    private:
     EncryptionParameters _parms;

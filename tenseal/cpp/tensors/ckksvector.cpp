@@ -641,4 +641,24 @@ shared_ptr<CKKSVector> CKKSVector::deepcopy() const {
     return CKKSVector::Create(ctx, vec);
 }
 
+std::vector<std::vector<uint64_t>> CKKSVector::get_ckks_ciphertext_values() {
+    std::vector<std::vector<uint64_t>> all_ciphertexts;
+    const auto& ciphertexts = this->ciphertext();
+
+    for (const auto& ct : ciphertexts) {
+        std::vector<uint64_t> coeffs;
+        size_t poly_count = ct.size();
+        size_t coeff_count = ct.poly_modulus_degree();
+
+        for (size_t i = 0; i < poly_count; ++i) {
+            const uint64_t* poly_ptr = ct.data(i);
+            coeffs.insert(coeffs.end(), poly_ptr, poly_ptr + coeff_count);
+        }
+
+        all_ciphertexts.push_back(std::move(coeffs));
+    }
+
+    return all_ciphertexts;
+}
+
 }  // namespace tenseal

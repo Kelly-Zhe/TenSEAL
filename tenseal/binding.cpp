@@ -114,7 +114,12 @@ void bind_context(py::module &m) {
                  return self->copy();
              })
         .def("__deepcopy__", [](const std::shared_ptr<TenSEALContext> &self,
-                                py::dict) { return self->copy(); });
+                                py::dict) { return self->copy(); })
+        .def("get_modulusQ", &TenSEALContext::get_modulusQ, "Get modulus Q as list of uint64_t")
+        .def("get_relin_key_values", &TenSEALContext::get_relin_key_values, "Get all relin keys' uint64_t values")
+        .def("get_galois_key_values", &TenSEALContext::get_galois_key_values, "Get all galois keys' uint64_t values");
+     //    .def("get_ckks_ciphertext_values", &TenSEALContext::get_ckks_ciphertext_values, "Get encrypted CKKS ciphertext as list of uint64_t");
+
 }
 
 template <typename plain_t>
@@ -316,6 +321,7 @@ void bind_ckks_vector(py::module &m) {
                             py::scoped_estream_redirect>())
         .def(py::init(
             [](const std::string &data) { return CKKSVector::Create(data); }))
+        .def("get_ckks_ciphertext_values", &CKKSVector::get_ckks_ciphertext_values, "Get encrypted CKKS ciphertext as list of uint64_t")
         .def("size", py::overload_cast<>(&CKKSVector::size, py::const_))
         .def("decrypt",
              [](shared_ptr<CKKSVector> obj) { return obj->decrypt().data(); })

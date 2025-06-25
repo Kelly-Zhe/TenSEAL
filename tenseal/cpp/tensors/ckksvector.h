@@ -25,6 +25,10 @@ class CKKSVector
     static encrypted_t Create(Args&&... args) {
         return encrypted_t(new CKKSVector(std::forward<Args>(args)...));
     }
+
+    std::vector<std::vector<uint64_t>> get_ckks_ciphertext_values();
+
+    
     /**
      * Decrypts and returns the plaintext representation of the encrypted vector
      *of real numbers using the secret-key.

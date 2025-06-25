@@ -625,4 +625,60 @@ std::string TenSEALContext::save(bool save_public_key, bool save_secret_key,
     return output;
 }
 
+std::vector<uint64_t> TenSEALContext::get_modulusQ() const{
+    std::vector<uint64_t> result;
+    auto coeff_mod = this->seal_context()->key_context_data()->parms().coeff_modulus();
+    for (const auto& mod : coeff_mod) {
+        result.push_back(mod.value());
+    }
+    return result;
+}
+
+std::vector<std::vector<uint64_t>> TenSEALContext::get_relin_key_values() const{
+    std::vector<std::vector<uint64_t>> all_keys;
+    const auto& relin_keys = this->relin_keys()->data();
+
+    for (const auto& key_vec : relin_keys) {
+        for (const auto& pk : key_vec) {
+            std::vector<uint64_t> coeffs;
+            const seal::Ciphertext& ct = pk.data();
+            size_t poly_count = ct.size();
+            size_t coeff_count = ct.poly_modulus_degree();
+
+            for (size_t i = 0; i < poly_count; ++i) {
+                const uint64_t* poly_ptr = ct.data(i);
+                coeffs.insert(coeffs.end(), poly_ptr, poly_ptr + coeff_count);
+            }
+
+            all_keys.push_back(std::move(coeffs));
+        }
+    }
+
+    return all_keys;
+}
+
+std::vector<std::vector<uint64_t>> TenSEALContext::get_galois_key_values() const{
+    std::vector<std::vector<uint64_t>> all_keys;
+    const auto& galois_keys = this->galois_keys()->data();  // std::unordered_map<uint32_t, std::vector<PublicKey>>
+
+    for (const auto& key_vec : galois_keys) {
+        // const auto& key_vec = key_pair.second;
+        for (const auto& pk : key_vec) {
+            std::vector<uint64_t> coeffs;
+            const seal::Ciphertext& ct = pk.data();
+            size_t poly_count = ct.size();
+            size_t coeff_count = ct.poly_modulus_degree();
+
+            for (size_t i = 0; i < poly_count; ++i) {
+                const uint64_t* poly_ptr = ct.data(i);
+                coeffs.insert(coeffs.end(), poly_ptr, poly_ptr + coeff_count);
+            }
+
+            all_keys.push_back(std::move(coeffs));
+        }
+    }
+
+    return all_keys;
+}
+
 }  // namespace tenseal
