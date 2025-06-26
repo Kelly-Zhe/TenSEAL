@@ -26,7 +26,7 @@ class CKKSVector
         return encrypted_t(new CKKSVector(std::forward<Args>(args)...));
     }
 
-    std::vector<std::vector<uint64_t>> get_ckks_ciphertext_values();
+    std::vector<std::vector<std::vector<uint64_t>>> get_ckks_ciphertext_values();
 
     
     /**

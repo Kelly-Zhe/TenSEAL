@@ -634,51 +634,60 @@ std::vector<uint64_t> TenSEALContext::get_modulusQ() const{
     return result;
 }
 
-std::vector<std::vector<uint64_t>> TenSEALContext::get_relin_key_values() const{
-    std::vector<std::vector<uint64_t>> all_keys;
+std::vector<std::vector<std::vector<uint64_t>>> TenSEALContext::get_relin_key_values() const{
+    std::vector<std::vector<std::vector<uint64_t>>> result;
     const auto& relin_keys = this->relin_keys()->data();
 
     for (const auto& key_vec : relin_keys) {
         for (const auto& pk : key_vec) {
-            std::vector<uint64_t> coeffs;
+            // std::vector<uint64_t> coeffs;
             const seal::Ciphertext& ct = pk.data();
             size_t poly_count = ct.size();
             size_t coeff_count = ct.poly_modulus_degree();
-
-            for (size_t i = 0; i < poly_count; ++i) {
-                const uint64_t* poly_ptr = ct.data(i);
-                coeffs.insert(coeffs.end(), poly_ptr, poly_ptr + coeff_count);
+            size_t mod_count = this->parms().coeff_modulus().size();
+            std::vector<std::vector<std::vector<uint64_t>>> relin_key(mod_count);
+            for (size_t mod = 0; mod < mod_count; ++mod) {
+                relin_key[mod].resize(poly_count);
+                for (size_t poly = 0; poly < poly_count; ++poly) {
+                    const uint64_t* poly_ptr = ct.data(poly) + mod * coeff_count;
+                    relin_key[mod][poly] = std::vector<uint64_t>(poly_ptr, poly_ptr + coeff_count);
+                }
             }
 
-            all_keys.push_back(std::move(coeffs));
+
+            result.insert(result.end(), relin_key.begin(), relin_key.end());
         }
     }
 
-    return all_keys;
+    return result;
 }
 
-std::vector<std::vector<uint64_t>> TenSEALContext::get_galois_key_values() const{
-    std::vector<std::vector<uint64_t>> all_keys;
+std::vector<std::vector<std::vector<uint64_t>>> TenSEALContext::get_galois_key_values() const{
+    std::vector<std::vector<std::vector<uint64_t>>> result;
     const auto& galois_keys = this->galois_keys()->data();  // std::unordered_map<uint32_t, std::vector<PublicKey>>
 
     for (const auto& key_vec : galois_keys) {
         // const auto& key_vec = key_pair.second;
         for (const auto& pk : key_vec) {
-            std::vector<uint64_t> coeffs;
+            // std::vector<uint64_t> coeffs;
             const seal::Ciphertext& ct = pk.data();
             size_t poly_count = ct.size();
             size_t coeff_count = ct.poly_modulus_degree();
-
-            for (size_t i = 0; i < poly_count; ++i) {
-                const uint64_t* poly_ptr = ct.data(i);
-                coeffs.insert(coeffs.end(), poly_ptr, poly_ptr + coeff_count);
+            size_t mod_count = this->parms().coeff_modulus().size();
+            std::vector<std::vector<std::vector<uint64_t>>> galois_key(mod_count);
+            for (size_t mod = 0; mod < mod_count; ++mod) {
+                galois_key[mod].resize(poly_count);
+                for (size_t poly = 0; poly < poly_count; ++poly) {
+                    const uint64_t* poly_ptr = ct.data(poly) + mod * coeff_count;
+                    galois_key[mod][poly] = std::vector<uint64_t>(poly_ptr, poly_ptr + coeff_count);
+                }
             }
 
-            all_keys.push_back(std::move(coeffs));
+            result.insert(result.end(), galois_key.begin(), galois_key.end());
         }
     }
 
-    return all_keys;
+    return result;
 }
 
 }  // namespace tenseal

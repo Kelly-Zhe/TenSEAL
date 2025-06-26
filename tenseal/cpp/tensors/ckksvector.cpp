@@ -641,7 +641,8 @@ shared_ptr<CKKSVector> CKKSVector::deepcopy() const {
     return CKKSVector::Create(ctx, vec);
 }
 
-std::vector<std::vector<uint64_t>> CKKSVector::get_ckks_ciphertext_values() {
+std::vector<std::vector<std::vector<uint64_t>>> CKKSVector::get_ckks_ciphertext_values() {
+    std::vector<std::vector<std::vector<uint64_t>>> result;
     std::vector<std::vector<uint64_t>> all_ciphertexts;
     const auto& ciphertexts = this->ciphertext();
 
@@ -649,16 +650,25 @@ std::vector<std::vector<uint64_t>> CKKSVector::get_ckks_ciphertext_values() {
         std::vector<uint64_t> coeffs;
         size_t poly_count = ct.size();
         size_t coeff_count = ct.poly_modulus_degree();
+        size_t modulus_count = this->tenseal_context()->get_modulusQ().size();
 
         for (size_t i = 0; i < poly_count; ++i) {
-            const uint64_t* poly_ptr = ct.data(i);
-            coeffs.insert(coeffs.end(), poly_ptr, poly_ptr + coeff_count);
+            const uint64_t* data_ptr = ct.data(i);
+            std::vector<std::vector<uint64_t>> poly_mods;
+
+            for (size_t j = 0; j < modulus_count; ++j) {
+                const uint64_t* coeff_ptr = data_ptr + j * coeff_count;
+                std::vector<uint64_t> coeffs(coeff_ptr, coeff_ptr + coeff_count);
+                poly_mods.push_back(std::move(coeffs));
+            }
+
+            result.push_back(std::move(poly_mods));
         }
 
-        all_ciphertexts.push_back(std::move(coeffs));
+        // all_ciphertexts.push_back(std::move(coeffs));
     }
 
-    return all_ciphertexts;
+    return result;
 }
 
 }  // namespace tenseal

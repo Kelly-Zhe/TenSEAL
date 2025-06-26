@@ -263,8 +263,8 @@ class TenSEALContext {
     bool has_secret_key() const;
     bool has_relin_keys() const;
     std::vector<uint64_t> get_modulusQ() const;
-    std::vector<std::vector<uint64_t>> get_relin_key_values() const;
-    std::vector<std::vector<uint64_t>> get_galois_key_values() const;
+    std::vector<std::vector<std::vector<uint64_t>>> get_relin_key_values() const;
+    std::vector<std::vector<std::vector<uint64_t>>> get_galois_key_values() const;
 
    private:
     EncryptionParameters _parms;
@@ -273,6 +273,7 @@ class TenSEALContext {
     shared_ptr<SecretKey> _secret_key = nullptr;
     shared_ptr<RelinKeys> _relin_keys = nullptr;
     shared_ptr<GaloisKeys> _galois_keys = nullptr;
+    std::shared_ptr<seal::GaloisKeys> _seal_galois_keys;
     shared_ptr<TenSEALEncoder> encoder_factory = nullptr;
 
     shared_ptr<Encryptor> _encryptor = nullptr;
