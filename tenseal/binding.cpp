@@ -322,6 +322,16 @@ void bind_ckks_vector(py::module &m) {
         .def(py::init(
             [](const std::string &data) { return CKKSVector::Create(data); }))
         .def("get_ckks_ciphertext_values", &CKKSVector::get_ckks_ciphertext_values, "Get encrypted CKKS ciphertext as list of uint64_t")
+        .def("parms_id", [](shared_ptr<CKKSVector> obj) {
+                    auto pid = obj->ciphertext()[0].parms_id();
+                    return std::vector<uint64_t>(pid.begin(), pid.end());
+                    })
+         .def_static("from_raw", &CKKSVector::CKKSVector_from_raw,
+               py::arg("context"),
+               py::arg("raw_data"),
+               py::arg("parms_id"),
+               py::arg("scale"),
+               "Construct CKKSVector from raw data and parms_id")
         .def("size", py::overload_cast<>(&CKKSVector::size, py::const_))
         .def("decrypt",
              [](shared_ptr<CKKSVector> obj) { return obj->decrypt().data(); })

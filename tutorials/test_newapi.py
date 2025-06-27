@@ -36,9 +36,10 @@ vec = ts.ckks_vector(context, plain_vec)
 # 4. 获取密文的系数值（uint64）
 ciph_coeffs = vec.get_ckks_ciphertext_values()
 print(f"[+] Ciphertext slot count = {len(ciph_coeffs)} polys")
-# print(f"    First poly preview (up to 10): {ciph_coeffs[0][1][:10]}")
-# print(f"    First poly preview (up to 10): {ciph_coeffs[1][:10]}")
-# print(f"    First poly preview (up to 10): {ciph_coeffs[2][:10]}")
+
+vec+=vec
+ciph_coeffs2 = vec.get_ckks_ciphertext_values()
+
 #
 # 5. 获取 relin keys（uint64_t）
 rk_vals = context.get_relin_key_values()

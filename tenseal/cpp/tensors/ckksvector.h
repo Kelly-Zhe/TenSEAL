@@ -28,6 +28,13 @@ class CKKSVector
 
     std::vector<std::vector<std::vector<uint64_t>>> get_ckks_ciphertext_values();
 
+    std::shared_ptr<CKKSVector> CKKSVector_from_raw(
+    std::shared_ptr<TenSEALContext> context,
+    const std::vector<uint64_t>& raw_data,
+    const std::vector<uint64_t>& parms_id_vec,
+    double scale
+);
+
     
     /**
      * Decrypts and returns the plaintext representation of the encrypted vector
@@ -144,6 +151,8 @@ class CKKSVector
     CKKSVector(const shared_ptr<TenSEALContext>& ctx,
                const CKKSVectorProto& vec);
     CKKSVector(const shared_ptr<const CKKSVector>& vec);
+    CKKSVector(const shared_ptr<TenSEALContext> &ctx,
+               const vector<Ciphertext>& ciphertexts, const vector<size_t> &sizes);
 
     static Ciphertext encrypt(shared_ptr<TenSEALContext> context, double scale,
                               plain_t pt);

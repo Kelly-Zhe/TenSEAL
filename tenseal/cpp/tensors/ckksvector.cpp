@@ -44,6 +44,17 @@ CKKSVector::CKKSVector(const shared_ptr<TenSEALContext>& ctx,
     }
 }
 
+CKKSVector::CKKSVector(const shared_ptr<TenSEALContext> &ctx,
+               const vector<Ciphertext>& ciphertexts, const vector<size_t> &sizes) {
+     this->link_tenseal_context(ctx);
+     this->_init_scale = ciphertexts[0].scale();
+
+    this->_ciphertexts = ciphertexts;
+    this->_sizes = sizes;
+
+}
+
+
 CKKSVector::CKKSVector(const shared_ptr<TenSEALContext>& ctx,
                        const string& vec) {
     this->link_tenseal_context(ctx);
@@ -70,6 +81,14 @@ CKKSVector::CKKSVector(const shared_ptr<const CKKSVector>& vec) {
     this->_sizes = vec->chunked_size();
     this->_ciphertexts = vec->ciphertext();
 }
+
+// CKKSVector::CKKSVector(shared_ptr<TenSEALContext> context,
+//                const Ciphertext& ciphertext, scale, size) {
+//     this->link_tenseal_context(context);
+//     this->_init_scale = ciphertext.scale();
+//     this->_sizes = ciphertext.size();
+//     this->_ciphertexts = ciphertext();
+// }
 
 Ciphertext CKKSVector::encrypt(shared_ptr<TenSEALContext> context, double scale,
                                plain_t pt) {
@@ -650,7 +669,7 @@ std::vector<std::vector<std::vector<uint64_t>>> CKKSVector::get_ckks_ciphertext_
         std::vector<uint64_t> coeffs;
         size_t poly_count = ct.size();
         size_t coeff_count = ct.poly_modulus_degree();
-        size_t modulus_count = this->tenseal_context()->get_modulusQ().size();
+        size_t modulus_count = ct.coeff_modulus_size();;
 
         for (size_t i = 0; i < poly_count; ++i) {
             const uint64_t* data_ptr = ct.data(i);
@@ -669,6 +688,49 @@ std::vector<std::vector<std::vector<uint64_t>>> CKKSVector::get_ckks_ciphertext_
     }
 
     return result;
+}
+
+shared_ptr<CKKSVector> CKKSVector::CKKSVector_from_raw(
+    std::shared_ptr<TenSEALContext> context,
+    const std::vector<uint64_t>& raw_data,
+    const std::vector<uint64_t>& parms_id_vec,
+    double scale
+) {
+    if (parms_id_vec.size() != 4) {
+        throw std::invalid_argument("parms_id must be a list of 4 uint64_t");
+    }
+
+    // 构造 parms_id
+    seal::parms_id_type parms_id;
+    std::copy(parms_id_vec.begin(), parms_id_vec.end(), parms_id.begin());
+
+    auto seal_context = context->seal_context();
+    auto context_data = seal_context->get_context_data(parms_id);
+    if (!context_data) {
+        throw std::invalid_argument("Invalid parms_id: not found in context chain");
+    }
+
+    size_t poly_modulus_degree = context_data->parms().poly_modulus_degree();
+    size_t coeff_mod_count = context_data->parms().coeff_modulus().size();
+    size_t poly_count = raw_data.size() / (poly_modulus_degree * coeff_mod_count);
+
+    if (raw_data.size() != poly_count * coeff_mod_count * poly_modulus_degree) {
+        throw std::invalid_argument("raw_data size does not match inferred poly_count * coeff_mod_count * N");
+    }
+
+    seal::Ciphertext ct;
+    ct.resize(*seal_context, parms_id, poly_count);
+    // ct.resize(poly_count, coeff_mod_count, poly_modulus_degree);  // SEAL 4.1 resize API
+    ct.parms_id() = parms_id;    // 手动设置参数ID
+    ct.scale() = scale;          // 设置缩放因子
+    std::copy(raw_data.begin(), raw_data.end(), ct.data());
+
+    std::vector<seal::Ciphertext> cts;
+    cts.emplace_back(std::move(ct));
+    std::vector<size_t> sizes;
+    sizes.emplace_back(poly_modulus_degree);
+
+    return std::make_shared<tenseal::CKKSVector>(context, cts, sizes);  //todo: bugs
 }
 
 }  // namespace tenseal
