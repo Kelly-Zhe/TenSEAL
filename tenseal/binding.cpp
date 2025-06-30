@@ -331,6 +331,7 @@ void bind_ckks_vector(py::module &m) {
                py::arg("raw_data"),
                py::arg("parms_id"),
                py::arg("scale"),
+               py::arg("slot_cout"),
                "Construct CKKSVector from raw data and parms_id")
         .def("size", py::overload_cast<>(&CKKSVector::size, py::const_))
         .def("decrypt",

@@ -694,7 +694,7 @@ shared_ptr<CKKSVector> CKKSVector::CKKSVector_from_raw(
     std::shared_ptr<TenSEALContext> context,
     const std::vector<uint64_t>& raw_data,
     const std::vector<uint64_t>& parms_id_vec,
-    double scale
+    double scale, size_t slot_count
 ) {
     if (parms_id_vec.size() != 4) {
         throw std::invalid_argument("parms_id must be a list of 4 uint64_t");
@@ -725,10 +725,14 @@ shared_ptr<CKKSVector> CKKSVector::CKKSVector_from_raw(
     ct.scale() = scale;          // 设置缩放因子
     std::copy(raw_data.begin(), raw_data.end(), ct.data());
 
+    // seal::Evaluator evaluator(*seal_context);
+    // evaluator.transform_to_ntt_inplace(ct);
+    ct.is_ntt_form() = true;
+
     std::vector<seal::Ciphertext> cts;
     cts.emplace_back(std::move(ct));
     std::vector<size_t> sizes;
-    sizes.emplace_back(poly_modulus_degree);
+    sizes.emplace_back(slot_count);
 
     return std::make_shared<tenseal::CKKSVector>(context, cts, sizes);  //todo: bugs
 }

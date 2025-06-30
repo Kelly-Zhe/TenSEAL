@@ -213,4 +213,12 @@ class CKKSVector(AbstractTensor):
         return self
 
     def get_ckks_ciphertext_values(self):
-        return self.data.get_ckks_ciphertext_values();
+        return self.data.get_ckks_ciphertext_values()
+    
+    def parms_id(self):
+        return self.data.parms_id()
+    
+    @classmethod
+    def from_raw(cls, context, raw_data, parms_id, scale, slot_count):
+        cpp_vec = ts._ts_cpp.CKKSVector.from_raw(context.data, raw_data, parms_id, scale, slot_count)
+        return cls(context=context, data=cpp_vec)
