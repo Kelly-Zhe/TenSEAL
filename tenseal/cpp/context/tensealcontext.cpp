@@ -631,34 +631,71 @@ std::vector<uint64_t> TenSEALContext::get_modulusQ() const{
     for (const auto& mod : coeff_mod) {
         result.push_back(mod.value());
     }
+
     return result;
 }
 
-std::vector<std::vector<std::vector<uint64_t>>> TenSEALContext::get_relin_key_values() const{
-    std::vector<std::vector<std::vector<uint64_t>>> result;
-    const auto& relin_keys = this->relin_keys()->data();
+std::vector<uint64_t> TenSEALContext::get_modulusP() const{
+    std::vector<uint64_t> result;
 
-    for (const auto& key_vec : relin_keys) {
-        for (const auto& pk : key_vec) {
-            // std::vector<uint64_t> coeffs;
-            const seal::Ciphertext& ct = pk.data();
-            size_t poly_count = ct.size();
-            size_t coeff_count = ct.poly_modulus_degree();
-            size_t mod_count = this->parms().coeff_modulus().size();
-            std::vector<std::vector<std::vector<uint64_t>>> relin_key(mod_count);
-            for (size_t mod = 0; mod < mod_count; ++mod) {
-                relin_key[mod].resize(poly_count);
-                for (size_t poly = 0; poly < poly_count; ++poly) {
-                    const uint64_t* poly_ptr = ct.data(poly) + mod * coeff_count;
-                    relin_key[mod][poly] = std::vector<uint64_t>(poly_ptr, poly_ptr + coeff_count);
-                }
-            }
+    auto context_data = this->seal_context()->key_context_data();
+    auto rns_tool = context_data->rns_tool();
 
-
-            result.insert(result.end(), relin_key.begin(), relin_key.end());
-        }
+    if (!rns_tool) {
+        std::cerr << "rns_tool is null" << std::endl;
+        return result;
     }
 
+    // Q
+    std::set<uint64_t> q_mods;
+    for (const auto& mod : context_data->parms().coeff_modulus()) {
+        q_mods.insert(mod.value());
+    }
+
+    const auto* bsk_base = rns_tool->base_Bsk();
+    if (!bsk_base) {
+        std::cerr << "base_Bsk is null" << std::endl;
+        return result;
+    }
+
+    for (size_t i = 0; i < bsk_base->size(); ++i) {
+        auto mod_value = (*bsk_base)[i].value();
+        if (q_mods.find(mod_value) == q_mods.end()) {
+            result.push_back(mod_value); // 这是 modulus P 中的元素
+        }
+    }
+    return result;
+}
+
+std::vector<std::vector<std::vector<std::vector<uint64_t>>>> TenSEALContext::get_relin_key_values() const{
+    std::vector<std::vector<std::vector<std::vector<uint64_t>>>> result;
+    const auto& relin_keys = this->relin_keys();
+    const auto &data = relin_keys->data();
+    size_t key_component_count = data.size();
+
+    for (size_t k = 0; k < key_component_count; ++k) {
+        const auto &key_vec = data[k]; 
+        if (key_vec.empty()) continue;
+        for (const auto& pk : key_vec) {
+            const seal::Ciphertext &ct = pk.data();
+            size_t poly_count = ct.size(); 
+            size_t coeff_count = ct.poly_modulus_degree();
+            size_t mod_count = this->seal_context()->key_context_data()->parms().coeff_modulus().size();
+
+            std::vector<std::vector<std::vector<uint64_t>>> key_component_vec(mod_count);
+
+            for (size_t mod = 0; mod < mod_count; ++mod) {
+                key_component_vec[mod].resize(poly_count);
+                for (size_t poly = 0; poly < poly_count; ++poly) {
+                    // 取出第poly段对应模数mod的多项式系数指针
+                    const uint64_t *poly_ptr = ct.data(poly) + mod * coeff_count;
+
+                    key_component_vec[mod][poly] = std::vector<uint64_t>(poly_ptr, poly_ptr + coeff_count);
+                }
+            }
+            result.push_back(std::move(key_component_vec));
+        }
+    }
     return result;
 }
 

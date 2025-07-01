@@ -116,6 +116,7 @@ void bind_context(py::module &m) {
         .def("__deepcopy__", [](const std::shared_ptr<TenSEALContext> &self,
                                 py::dict) { return self->copy(); })
         .def("get_modulusQ", &TenSEALContext::get_modulusQ, "Get modulus Q as list of uint64_t")
+        .def("get_modulusP", &TenSEALContext::get_modulusP, "Get modulus P as list of uint64_t")
         .def("get_relin_key_values", &TenSEALContext::get_relin_key_values, "Get all relin keys' uint64_t values")
         .def("get_galois_key_values", &TenSEALContext::get_galois_key_values, "Get all galois keys' uint64_t values");
      //    .def("get_ckks_ciphertext_values", &TenSEALContext::get_ckks_ciphertext_values, "Get encrypted CKKS ciphertext as list of uint64_t");

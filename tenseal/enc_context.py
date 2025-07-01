@@ -297,9 +297,47 @@ class Context:
         )
     def get_modulusQ(self):
         return self.data.get_modulusQ()
+    
+    def get_modulusP(self):
+        return self.data.get_modulusP()
 
     def get_relin_key_values(self):
         return self.data.get_relin_key_values()
+    
+    # def get_galois_keys_raw_data(self):
+    #     """
+    #     获取 GaloisKeys 的原始结构数据。
+    #     返回一个 dict，key 是 galois_index，value 是
+    #     [key_component][modulus][poly][coeff] 四层嵌套结构
+    #     """
+    #     result = {}
+    #     context = self.data
 
-    def get_galois_key_values(self):
-        return self.data.get_galois_key_values()
+    #     galois_keys = context.galois_keys()  # 获取 seal::GaloisKeys
+    #     seal_context = context.seal_context()
+    #     parms = seal_context.key_context_data().parms()
+    #     poly_modulus_degree = parms.poly_modulus_degree()
+    #     coeff_modulus_size = len(parms.coeff_modulus())
+
+    #     # 遍历每个 galois 元素
+    #     for galois_idx in galois_keys.get_index_set():
+    #         key_components = galois_keys.data(galois_idx)
+    #         key_data = []
+
+    #         for plain in key_components:
+    #             coeff_count = plain.coeff_count()
+    #             assert coeff_count == poly_modulus_degree * coeff_modulus_size
+
+    #             component_data = []
+    #             for mod in range(coeff_modulus_size):
+    #                 offset = mod * poly_modulus_degree
+    #                 coeffs = [plain.data()[i] for i in range(offset, offset + poly_modulus_degree)]
+    #                 component_data.append([coeffs])  # [poly][coeff]
+    #             key_data.append(component_data)
+
+    #         result[galois_idx] = key_data
+
+    #     return result
+
+    # def get_galois_key_values(self):
+    #     return self.data.get_galois_key_values()

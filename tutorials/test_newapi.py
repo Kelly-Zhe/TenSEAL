@@ -22,14 +22,12 @@ mod_q = context.get_modulusQ()
 print(f"[+] Modulus Q (L={len(mod_q)}):")
 for i, q in enumerate(mod_q):
     print(f"  Q[{i}] = {q}")
-#
-# # 若你定义了 get_modulusP，才调用
-# if hasattr(ts, "get_modulusP"):
-#     mod_p = ts.get_modulusP(context)
-#     print(f"[+] Modulus P (count={len(mod_p)}): {mod_p}")
-# else:
-#     print("[!] get_modulusP not defined in your bindings.")
-#
+    
+mod_p = context.get_modulusP()
+print(f"[+] Modulus P (L={len(mod_p)}):")
+for i, p in enumerate(mod_p):
+    print(f"  P[{i}] = {p}")
+
 # 3. 加密一个向量
 plain_vec = [1.1, 2.2, 3.3, 4.4]
 vec = ts.ckks_vector(context, plain_vec)
@@ -38,6 +36,7 @@ vec = ts.ckks_vector(context, plain_vec)
 ciph_coeffs = vec.get_ckks_ciphertext_values()
 print(f"[+] Ciphertext slot count = {len(ciph_coeffs)} polys")
 
+#5. 构造一个新的ckksvector from raw data
 vec+=vec
 ciph_coeffs2 = vec.get_ckks_ciphertext_values()
 
@@ -48,13 +47,46 @@ test_vec = ts.CKKSVector.from_raw(context, ciph_coeffs2, parms_id, scale,4)
 
 res = test_vec.decrypt()
 
-#
-# 5. 获取 relin keys（uint64_t）
+# 6. 获取 relin keys（uint64_t）
 rk_vals = context.get_relin_key_values()
 print(f"[+] Relin keys count = {len(rk_vals)} polys")
-print(f"    First relin poly preview: {rk_vals[0][:10]}")
+# print(f"    First relin poly preview: {rk_vals[0][:10]}")
 
 # 6. 获取 galois keys（uint64_t）
-gk_vals = context.get_galois_key_values()
-print(f"[+] Galois keys count = {len(gk_vals)} polys")
-print(f"    First galois poly preview: {gk_vals[0][:10]}")
+
+import tenseal.sealapi as sealapi
+context.generate_galois_keys()
+seal_ctx = context.seal_context().data
+keygen = sealapi.KeyGenerator(seal_ctx)
+idx = sealapi.GaloisKeys.get_index(7)
+keygen = sealapi.KeyGenerator(context.seal_context().data)
+galois_keys = sealapi.GaloisKeys()
+keygen.create_galois_keys([idx], galois_keys)
+
+# Step 4: 访问 raw_data
+if galois_keys.has_key(idx):
+    raw_data = galois_keys.get_raw_data(idx, seal_ctx)
+    print("Got raw data shape:")
+    print(f"#keys: {len(raw_data)}")
+    print(f"#modulus layers: {len(raw_data[0])}")
+    print(f"#polys: {len(raw_data[0][0])}")
+    print(f"#coeffs: {len(raw_data[0][0][0])}")
+else:
+    print("Galois key not found!")
+
+
+
+
+# print(f"[+] Galois keys count = {len(gk_vals)} polys")
+# print(f"    First galois poly preview: {gk_vals[0][:10]}")
+# import tenseal.sealapi as sealapi
+# ctx_data = context.seal_context().data.key_context_data()
+# parms = ctx_data.parms()
+# idx = sealapi.GaloisKeys.get_index(7)
+# keygen = sealapi.KeyGenerator(context.seal_context().data)
+# galois_keys = sealapi.GaloisKeys()
+# keygen.create_galois_keys([idx], galois_keys)
+# pubkey = galois_keys.key(idx)[0]
+
+
+print("done")
