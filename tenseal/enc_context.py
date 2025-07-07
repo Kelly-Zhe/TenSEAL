@@ -5,7 +5,9 @@ import multiprocessing
 from enum import Enum
 from typing import List, Union
 from abc import ABC
+import numpy as np
 import tenseal as ts
+import tenseal.sealapi as sealapi
 
 
 class ENCRYPTION_TYPE(Enum):
@@ -302,9 +304,20 @@ class Context:
         return self.data.get_modulusP()
 
     def get_relin_key_values(self):
-        return self.data.get_relin_key_values()
+        rk_vals = self.data.get_relin_key_values()
+        return np.transpose(np.array(rk_vals), (2,0,1,3))
     
-    # def get_galois_keys_raw_data(self):
+    def get_galois_keys_raw_data(self):
+        seal_ctx = self.seal_context().data
+        keygen = sealapi.KeyGenerator(seal_ctx)
+        # idx = sealapi.GaloisKeys.get_index(index)
+        keygen = sealapi.KeyGenerator(seal_ctx)
+        galois_keys = sealapi.GaloisKeys()
+        keygen.create_galois_keys(galois_keys)
+        raw_data = galois_keys.get_raw_data(seal_ctx)
+        return raw_data
+        
+        
     #     """
     #     获取 GaloisKeys 的原始结构数据。
     #     返回一个 dict，key 是 galois_index，value 是

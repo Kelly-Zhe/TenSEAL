@@ -140,9 +140,48 @@ void bind_seal_encrypt_decrypt(pybind11::module &m) {
         .def_static("get_index", &GaloisKeys::get_index)
         .def("has_key", &GaloisKeys::has_key)
         .def("key", &GaloisKeys::key)
+        .def("get_raw_data_all_gk", [](GaloisKeys& gk, const SEALContext& context) {
+          std::map<std::uint32_t, std::vector<std::vector<std::vector<std::vector<uint64_t>>>>> result;
+
+          auto ctx_data = context.key_context_data();
+          auto parms = ctx_data->parms();
+          size_t poly_modulus_degree = parms.poly_modulus_degree();
+          size_t coeff_modulus_size = parms.coeff_modulus().size();
+
+          size_t slot_count = poly_modulus_degree / 2;
+          for (std::uint32_t elt = 1; elt < 2 * slot_count; elt += 2) {
+               if (!gk.has_key(elt))
+                    continue;
+
+               const auto& key_data = gk.key(elt);
+               std::vector<std::vector<std::vector<std::vector<uint64_t>>>> galois_result;
+
+               for (const auto& pk : key_data) {
+                    const auto& ct = pk.data();
+                    size_t poly_count = ct.size();
+                    std::vector<std::vector<std::vector<uint64_t>>> key_component;
+
+                    for (size_t mod = 0; mod < coeff_modulus_size; ++mod) {
+                         std::vector<std::vector<uint64_t>> mod_component;
+
+                         for (size_t poly = 0; poly < poly_count; ++poly) {
+                              const uint64_t* ptr = ct.data(poly) + mod * poly_modulus_degree;
+                              mod_component.emplace_back(ptr, ptr + poly_modulus_degree);
+                         }
+
+                         key_component.emplace_back(std::move(mod_component));
+                    }
+
+                    galois_result.emplace_back(std::move(key_component));
+               }
+
+               result[elt] = std::move(galois_result);
+          }
+
+          return result;
+          })
         .def("get_raw_data", [](GaloisKeys& gk, std::uint32_t galois_idx, const SEALContext &context) {
           const auto& key_data = gk.key(galois_idx); 
-          std::cout << "key_data size: " << key_data.size() << std::endl;
           std::vector<std::vector<std::vector<std::vector<uint64_t>>>> result;
           auto ctx_data = context.key_context_data();
           auto parms = ctx_data->parms();
@@ -154,7 +193,6 @@ void bind_seal_encrypt_decrypt(pybind11::module &m) {
                const auto& ct = pk.data();  // ct is Ciphertext
                size_t poly_count = ct.size();  // number of polys
                std::vector<std::vector<std::vector<uint64_t>>> key_component;
-               std::cout<<"11111"<<std::endl;
                for (size_t mod = 0; mod < coeff_modulus_size; ++mod) {
                     std::vector<std::vector<uint64_t>> mod_component;
 
