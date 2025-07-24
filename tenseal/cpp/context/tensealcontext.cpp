@@ -625,7 +625,7 @@ std::string TenSEALContext::save(bool save_public_key, bool save_secret_key,
     return output;
 }
 
-std::vector<uint64_t> TenSEALContext::get_modulusQ() const{
+std::vector<uint64_t> TenSEALContext::get_modulus() const{
     std::vector<uint64_t> result;
     auto coeff_mod = this->seal_context()->key_context_data()->parms().coeff_modulus();
     for (const auto& mod : coeff_mod) {

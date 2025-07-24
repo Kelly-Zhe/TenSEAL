@@ -218,6 +218,9 @@ class CKKSVector(AbstractTensor):
     def parms_id(self):
         return self.data.parms_id()
     
+    def rotate(self, step):
+        return  self.data.rotate(step)
+    
     @classmethod
     def from_raw(cls, context, raw_data, parms_id, scale, slot_count):
         cpp_vec = ts._ts_cpp.CKKSVector.from_raw(context.data, raw_data, parms_id, scale, slot_count)

@@ -34,6 +34,8 @@ class CKKSVector
     const std::vector<uint64_t>& parms_id_vec,
     double scale,
     size_t slot_count);
+    std::shared_ptr<CKKSVector> rotate(int steps) const;
+
     CKKSVector(const shared_ptr<TenSEALContext> &ctx,
                const vector<Ciphertext>& ciphertexts, const vector<size_t> &sizes);
 

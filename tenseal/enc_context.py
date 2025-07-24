@@ -297,11 +297,15 @@ class Context:
         self.data.make_context_public(
             generate_galois_keys=generate_galois_keys, generate_relin_keys=generate_relin_keys
         )
-    def get_modulusQ(self):
-        return self.data.get_modulusQ()
+    def get_modulus(self):
+        modulus = self.data.get_modulus()
+        modulusQ = modulus[:-1]
+        modulusP = modulus[-1:]
+        return modulusQ, modulusP
+        
     
-    def get_modulusP(self):
-        return self.data.get_modulusP()
+    # def get_modulusP(self):
+    #     return self.data.get_modulusP()
 
     def get_relin_key_values(self):
         rk_vals = self.data.get_relin_key_values()
@@ -316,6 +320,17 @@ class Context:
         keygen.create_galois_keys(galois_keys)
         raw_data = galois_keys.get_raw_data(seal_ctx)
         return raw_data
+    
+    def get_eval_rotate_key_by_indices(self, autoIdx_list):
+        gk_vals = self.data.get_eval_rotate_key_by_indices(autoIdx_list)
+        return gk_vals
+    
+    def get_eval_mult_key(self):
+        rk_vals = self.data.get_eval_mult_key()
+        return np.array(rk_vals)
+        
+        
+        
         
         
     #     """

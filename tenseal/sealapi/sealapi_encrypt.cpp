@@ -186,9 +186,10 @@ void bind_seal_encrypt_decrypt(pybind11::module &m) {
           auto ctx_data = context.key_context_data();
           auto parms = ctx_data->parms();
           size_t poly_modulus_degree = parms.poly_modulus_degree();
-          std::cout<<poly_modulus_degree<<std::endl;
+          // std::cout<<poly_modulus_degree<<std::endl;
           size_t coeff_modulus_size = parms.coeff_modulus().size();
-          std::cout<<coeff_modulus_size<<std::endl;
+          // std::cout<<coeff_modulus_size<<std::endl;
+          std::cout << "Number of key shares: " << key_data.size() << std::endl;
           for (const auto& pk : key_data) {
                const auto& ct = pk.data();  // ct is Ciphertext
                size_t poly_count = ct.size();  // number of polys

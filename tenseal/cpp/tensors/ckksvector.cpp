@@ -1,4 +1,6 @@
 #include "tenseal/cpp/tensors/ckksvector.h"
+#include <fstream>
+#include <string>
 
 using namespace seal;
 using namespace std;
@@ -222,9 +224,81 @@ shared_ptr<CKKSVector> CKKSVector::sub_inplace(
     return shared_from_this();
 }
 
+void print_ciphertext_raw(const seal::Ciphertext& ct, const seal::SEALContext& context, const std::string& label) {
+    using namespace seal;
+
+    printf("==== Raw Ciphertext [%s] ====\n", label.c_str());
+    printf(" - size: %zu\n", ct.size());
+    printf(" - poly_modulus_degree: %zu\n", ct.poly_modulus_degree());
+    printf(" - coeff_modulus_size: %zu\n", ct.coeff_modulus_size());
+    printf(" - scale: %.6e\n", ct.scale());
+
+    auto context_data = context.get_context_data(ct.parms_id());
+    if (!context_data) {
+        printf("ERROR: invalid parms_id\n");
+        return;
+    }
+
+    auto& parms = context_data->parms();
+    size_t poly_degree = parms.poly_modulus_degree();
+    size_t coeff_mod_count = parms.coeff_modulus().size();
+    size_t ciphertext_size = ct.size();  // number of polys: c0, c1, [c2]
+
+    const uint64_t* data_ptr = ct.data();
+
+    for (size_t i = 0; i < ciphertext_size; i++) {
+        printf("--- Polynomial %zu ---\n", i);
+        for (size_t j = 0; j < coeff_mod_count; j++) {
+            printf("Modulus level %zu: ", j);
+            for (size_t k = 0; k < std::min<size_t>(10, poly_degree); k++) {
+                size_t idx = i * coeff_mod_count * poly_degree + j * poly_degree + k;
+                printf("%lu ", data_ptr[idx]);
+            }
+            printf("...\n");
+        }
+    }
+
+    printf("=========================================\n");
+    fflush(stdout);
+}
+
+void dump_ciphertext_flat(const seal::Ciphertext& ct,
+                          const seal::SEALContext& context,
+                          const std::string& filepath) {
+    using namespace seal;
+
+    auto context_data = context.get_context_data(ct.parms_id());
+    if (!context_data) {
+        throw std::invalid_argument("Invalid parms_id in ciphertext");
+    }
+
+    const auto& parms = context_data->parms();
+    size_t poly_degree = parms.poly_modulus_degree();
+    size_t coeff_mod_count = parms.coeff_modulus().size();
+    size_t ciphertext_size = ct.size();  // number of polys
+
+    const uint64_t* data_ptr = ct.data();
+    std::ofstream fout(filepath);
+    if (!fout.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filepath);
+    }
+
+    for (size_t poly = 0; poly < ciphertext_size; ++poly) {
+        for (size_t mod = 0; mod < coeff_mod_count; ++mod) {
+            for (size_t k = 0; k < poly_degree; ++k) {
+                size_t idx = poly * coeff_mod_count * poly_degree + mod * poly_degree + k;
+                fout << data_ptr[idx] << "\n";
+            }
+        }
+    }
+
+    fout.close();
+}
+
 shared_ptr<CKKSVector> CKKSVector::mul_inplace(
     const shared_ptr<CKKSVector>& other) {
     auto to_mul = other;
+    printf("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!!!");
     if (!this->tenseal_context()->equals(to_mul->tenseal_context())) {
         // Different contexts means different parameters
         throw invalid_argument(
@@ -237,9 +311,17 @@ shared_ptr<CKKSVector> CKKSVector::mul_inplace(
 
         this->tenseal_context()->evaluator->multiply_inplace(
             this->_ciphertexts[idx], to_mul->_ciphertexts[idx]);
+        print_ciphertext_raw(this->_ciphertexts[idx], *this->tenseal_context()->seal_context(), "after mul");
 
         this->auto_relin(_ciphertexts[idx]);
+        print_ciphertext_raw(this->_ciphertexts[idx], *this->tenseal_context()->seal_context(), "after relin");
+        // dump_ciphertext_flat(this->_ciphertexts[idx],
+        // *this->tenseal_context()->seal_context(),
+        // "/home/wwz/wwz_local/ct_after_relin_" + std::to_string(idx) + ".txt");
+
+
         this->auto_rescale(_ciphertexts[idx]);
+        print_ciphertext_raw(this->_ciphertexts[idx], *this->tenseal_context()->seal_context(), "after rescale");
     }
 
     return shared_from_this();
@@ -664,6 +746,7 @@ std::vector<std::vector<std::vector<uint64_t>>> CKKSVector::get_ckks_ciphertext_
     std::vector<std::vector<std::vector<uint64_t>>> result;
     std::vector<std::vector<uint64_t>> all_ciphertexts;
     const auto& ciphertexts = this->ciphertext();
+    printf("bbbbbbbb!!!!!\n");
 
     for (const auto& ct : ciphertexts) {
         std::vector<uint64_t> coeffs;
@@ -735,6 +818,22 @@ shared_ptr<CKKSVector> CKKSVector::CKKSVector_from_raw(
     sizes.emplace_back(slot_count);
 
     return std::make_shared<tenseal::CKKSVector>(context, cts, sizes);  //todo: bugs
+}
+
+shared_ptr<CKKSVector> CKKSVector::rotate(int steps) const {
+    auto context = this->tenseal_context();
+    if (!context->galois_keys()) {
+        throw std::runtime_error("Galois keys not set. Call generate_galois_keys() first.");
+    }
+
+    seal::Ciphertext rotated;
+    auto galois_keys = this->tenseal_context()->galois_keys();
+    context->evaluator->rotate_vector(this->ciphertext()[0], steps, *galois_keys, rotated);
+
+    std::vector<seal::Ciphertext> ciphertexts = {rotated};
+    std::vector<size_t> shape = { this->size() };
+
+    return std::make_shared<CKKSVector>(context, ciphertexts, shape);
 }
 
 }  // namespace tenseal

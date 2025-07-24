@@ -193,6 +193,38 @@ shared_ptr<CKKSTensor> CKKSTensor::power_inplace(unsigned int power) {
     return shared_from_this();
 }
 
+void print_ciphertext_raw(const seal::Ciphertext& ct, const seal::SEALContext& context, std::string op_name) {
+    using namespace seal;
+
+    printf("==== Raw Ciphertext Dump (first 10 coeffs) ====\n");
+    printf(" - size: %zu\n", ct.size());
+    printf(" - poly_modulus_degree: %zu\n", ct.poly_modulus_degree());
+    printf(" - coeff_modulus_size: %zu\n", ct.coeff_modulus_size());
+    printf(" - scale: %.6e\n", ct.scale());
+
+    auto context_data = context.get_context_data(ct.parms_id());
+    auto& parms = context_data->parms();
+    size_t poly_degree = parms.poly_modulus_degree();
+    size_t coeff_mod_count = parms.coeff_modulus().size();
+    size_t ciphertext_size = ct.size();
+
+    const uint64_t* data_ptr = ct.data();
+
+    for (size_t i = 0; i < ciphertext_size; i++) {
+        printf("--- Polynomial %zu ---\n", i);
+        for (size_t j = 0; j < coeff_mod_count; j++) {
+            printf("Modulus level %zu: ", j);
+            for (size_t k = 0; k < std::min<size_t>(10, poly_degree); k++) {
+                size_t idx = i * coeff_mod_count * poly_degree + j * poly_degree + k;
+                printf("%lu ", data_ptr[idx]);
+            }
+            printf("...\n");
+        }
+    }
+    printf("===============================================\n");
+    fflush(stdout);
+}
+
 void CKKSTensor::perform_op(seal::Ciphertext& ct, seal::Ciphertext other,
                             OP op) {
     this->auto_same_mod(other, ct);
@@ -205,8 +237,11 @@ void CKKSTensor::perform_op(seal::Ciphertext& ct, seal::Ciphertext other,
             break;
         case OP::MUL:
             this->tenseal_context()->evaluator->multiply_inplace(ct, other);
+            print_ciphertext_raw(ct, *this->tenseal_context()->seal_context(), "multiply_inplace");
             this->auto_relin(ct);
+            print_ciphertext_raw(ct, *this->tenseal_context()->seal_context(), "relin");
             this->auto_rescale(ct);
+            print_ciphertext_raw(ct, *this->tenseal_context()->seal_context(), "rescale");
             break;
         default:
             throw invalid_argument("operation not defined");

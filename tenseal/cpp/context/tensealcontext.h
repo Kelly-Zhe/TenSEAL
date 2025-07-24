@@ -262,7 +262,7 @@ class TenSEALContext {
     bool has_public_key() const;
     bool has_secret_key() const;
     bool has_relin_keys() const;
-    std::vector<uint64_t> get_modulusQ() const;
+    std::vector<uint64_t> get_modulus() const;
     std::vector<uint64_t> get_modulusP() const;
     std::vector<std::vector<std::vector<std::vector<uint64_t>>>> get_relin_key_values() const;
     std::vector<std::vector<std::vector<uint64_t>>> get_galois_key_values() const;

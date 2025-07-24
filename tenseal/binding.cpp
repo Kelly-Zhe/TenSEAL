@@ -11,7 +11,9 @@
 using namespace tenseal;
 using namespace seal;
 using namespace std;
+using namespace seal::util;
 namespace py = pybind11;
+
 
 void bind_globals(py::module &m) {
     py::enum_<encryption_type>(m, "ENCRYPTION_TYPE")
@@ -115,10 +117,95 @@ void bind_context(py::module &m) {
              })
         .def("__deepcopy__", [](const std::shared_ptr<TenSEALContext> &self,
                                 py::dict) { return self->copy(); })
-        .def("get_modulusQ", &TenSEALContext::get_modulusQ, "Get modulus Q as list of uint64_t")
-        .def("get_modulusP", &TenSEALContext::get_modulusP, "Get modulus P as list of uint64_t")
+        .def("get_modulus", &TenSEALContext::get_modulus, "Get modulus as list of uint64_t")
+     //    .def("get_modulusP", &TenSEALContext::get_modulusP, "Get modulus P as list of uint64_t")
         .def("get_relin_key_values", &TenSEALContext::get_relin_key_values, "Get all relin keys' uint64_t values")
-        .def("get_galois_key_values", &TenSEALContext::get_galois_key_values, "Get all galois keys' uint64_t values");
+        .def("get_eval_mult_key", [](const std::shared_ptr<TenSEALContext>& ctx) {
+          std::vector<uint64_t> vecB_flat;
+          std::vector<uint64_t> vecA_flat;
+
+          const auto& rk_ptr = ctx->relin_keys();
+          if (!rk_ptr) {
+               throw std::runtime_error("RelinKeys not set in the context");
+          }
+          const seal::RelinKeys& rk = *rk_ptr;
+
+          const auto& seal_ctx = *ctx->seal_context();
+          auto key_context_data = seal_ctx.key_context_data();
+          auto parms = key_context_data->parms();
+          size_t poly_modulus_degree = parms.poly_modulus_degree();
+          size_t coeff_modulus_size = parms.coeff_modulus().size();
+
+          for (const auto& key_share : rk.data()) {  // std::vector<PublicKey>
+               for (const auto& pk : key_share) {
+                    const auto& ct = pk.data();  // Ciphertext
+                    size_t poly_count = ct.size();  // usually 2
+                    for (size_t poly = 0; poly < poly_count; ++poly) {
+                         const uint64_t* data_ptr = ct.data(poly);
+                         for (size_t mod = 0; mod < coeff_modulus_size; ++mod) {
+                              const uint64_t* coeff_ptr = data_ptr + mod * poly_modulus_degree;
+                              for (size_t k = 0; k < poly_modulus_degree; ++k) {
+                              if (poly == 0)
+                                   vecB_flat.push_back(coeff_ptr[k]);  // B vector
+                              else
+                                   vecA_flat.push_back(coeff_ptr[k]);  // A vector
+                              }
+                         }
+                    }
+               }
+          }
+
+          return std::make_tuple(vecB_flat, vecA_flat);
+          })
+          .def("get_eval_rotate_key_by_indices", [](const std::shared_ptr<TenSEALContext>& ctx,
+                                                  const std::vector<int>& autoIdx_list) {
+          std::vector<std::tuple<std::uint32_t,
+                                   std::vector<uint64_t>,
+                                   std::vector<uint64_t>>> result;
+
+          const auto& gk_ptr = ctx->galois_keys();
+          if (!gk_ptr) return result;
+          const GaloisKeys& gk = *gk_ptr;
+
+          const SEALContext& seal_ctx = *ctx->seal_context();
+          auto key_context_data = seal_ctx.key_context_data();
+          auto parms = key_context_data->parms();
+          size_t poly_modulus_degree = parms.poly_modulus_degree();
+          size_t coeff_modulus_size = parms.coeff_modulus().size();
+
+          //     auto galois_tool = GaloisTool::initialize(poly_modulus_degree);
+
+          for (int galois_element : autoIdx_list) {
+               //    uint32_t galois_element = galois_tool->get_elts_from_step(rot_index);
+               if (!gk.has_key(galois_element)) continue;
+               const auto& key_data = gk.key(galois_element); // vector<PublicKey>
+
+               std::vector<uint64_t> vecB_flat;
+               std::vector<uint64_t> vecA_flat;
+
+               for (const auto& pk : key_data) {
+                    const auto& ct = pk.data(); // Ciphertext internally
+                    size_t poly_count = ct.size();
+                    for (size_t poly = 0; poly < poly_count; ++poly) {
+                         const uint64_t* data_ptr = ct.data(poly);
+                         for (size_t mod = 0; mod < coeff_modulus_size; ++mod) {
+                              const uint64_t* coeff_ptr = data_ptr + mod * poly_modulus_degree;
+                              for (size_t k = 0; k < poly_modulus_degree; ++k) {
+                              if (poly == 0)
+                                   vecB_flat.push_back(coeff_ptr[k]);
+                              else
+                                   vecA_flat.push_back(coeff_ptr[k]);
+                              }
+                         }
+                    }
+               }
+
+               result.emplace_back(galois_element, std::move(vecB_flat), std::move(vecA_flat));
+          }
+
+          return result;
+          });
+     //    .def("get_galois_key_values", &TenSEALContext::get_galois_key_values, "Get all galois keys' uint64_t values");
      //    .def("get_ckks_ciphertext_values", &TenSEALContext::get_ckks_ciphertext_values, "Get encrypted CKKS ciphertext as list of uint64_t");
 
 }
@@ -334,6 +421,9 @@ void bind_ckks_vector(py::module &m) {
                py::arg("scale"),
                py::arg("slot_cout"),
                "Construct CKKSVector from raw data and parms_id")
+          .def("rotate", &CKKSVector::rotate, py::arg("steps"),
+               "Rotate the encrypted vector by given number of steps (positive = left, negative = right).")
+          
         .def("size", py::overload_cast<>(&CKKSVector::size, py::const_))
         .def("decrypt",
              [](shared_ptr<CKKSVector> obj) { return obj->decrypt().data(); })
